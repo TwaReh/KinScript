@@ -1,4 +1,3 @@
--- [Rayfield UI Setup]
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -7,239 +6,163 @@ local Window = Rayfield:CreateWindow({
    LoadingTitle = "Kin Ja's HUB V1",
    LoadingSubtitle = "by Kin Ja",
    Theme = "Default",
-
    DisableRayfieldPrompts = false,
    DisableBuildWarnings = false,
-
    ConfigurationSaving = {
       Enabled = true,
       FolderName = nil,
       FileName = "My Hub"
    },
-
    Discord = {
       Enabled = false,
       Invite = "noinvitelink",
       RememberJoins = true
    },
-
    KeySystem = false,
-   KeySettings = {
-      Title = "Untitled",
-      Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided",
-      FileName = "Key",
-      SaveKey = true,
-      GrabKeyFromSite = false,
-      Key = {"Hello"}
-   }
 })
 
--- [Hunters Tab]
+--// SERVICES
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+--// HUNTERS TAB
 local HuntersTab = Window:CreateTab("Hunters", 4483362458)
 local HuntersSection = HuntersTab:CreateSection("Hunters")
 
-Rayfield:Notify({
-   Title = "OUUU u cheatinggg",
-   Content = "Type shittt",
-   Duration = 5,
-})
-
--- AUTO SWING
-local isSwinging = false
-local swingThread
-
-local AutoSwingToggle = HuntersTab:CreateToggle({
-   Name = "Auto Swing",
-   CurrentValue = false,
-   Flag = "AutoSwingToggle",
-   Callback = function(Value)
-      isSwinging = Value
-      if isSwinging then
-         swingThread = task.spawn(function()
-            while isSwinging do
-               game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Combat"):FireServer()
-               task.wait()
+-- Auto Swing Button
+HuntersTab:CreateButton({
+    Name = "Auto Swing",
+    Callback = function()
+        task.spawn(function()
+            while wait() do
+                if not player.Character then return end
+                local combat = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Combat")
+                combat:FireServer()
             end
-         end)
-      else
-         isSwinging = false
-         print("⛔ Auto Swing OFF")
-      end
-   end,
+        end)
+    end
 })
 
--- KILL AURA (Toggle + Range Slider)
-local isKillAuraOn = false
-local killAuraRange = 85
-
-local KillAuraToggle = HuntersTab:CreateToggle({
-   Name = "Kill Aura :PP",
-   CurrentValue = false,
-   Flag = "KillAuraToggle",
-   Callback = function(Value)
-      isKillAuraOn = Value
-
-      if isKillAuraOn then
-         task.spawn(function()
-            local player = game.Players.LocalPlayer
-            local character = player.Character or player.CharacterAdded:Wait()
-            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-            local killInterval = 0.1
-
-            local function killMob(mob)
-               if mob and mob:FindFirstChild("Humanoid") then
-                  local humanoid = mob:FindFirstChild("Humanoid")
-                  if humanoid and humanoid.Health > 0 then
-                     humanoid.Health = 0
-                  end
-               end
-            end
-
-            while isKillAuraOn do
-               task.wait(killInterval)
-               local mobsFolder = workspace:FindFirstChild("Mobs")
-               if mobsFolder then
-                  for _, mob in pairs(mobsFolder:GetChildren()) do
-                     if mob:FindFirstChild("HumanoidRootPart") and mob ~= character then
-                        local distance = (humanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                        if distance <= killAuraRange then
-                           killMob(mob)
-                        end
-                     end
-                  end
-               end
-            end
-         end)
-      else
-         isKillAuraOn = false
-         print("⛔ Kill Aura OFF")
-      end
-   end,
-})
-
-local KillAuraRangeSlider = HuntersTab:CreateSlider({
-   Name = "Kill Aura Range",
-   Range = {10, 150},
-   Increment = 5,
-   Suffix = " studs",
-   CurrentValue = killAuraRange,
-   Flag = "KillAuraRange",
-   Callback = function(Value)
-      killAuraRange = Value
-      print("🔄 Kill Aura range set to:", killAuraRange)
-   end,
-})
-
--- [Garden Tab]
-local GardenTab = Window:CreateTab("Garden", 4483362458)
-local GardenSection = GardenTab:CreateSection("Garden")
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local player = Players.LocalPlayer
-local MAX_DISTANCE = 15
-local CHECK_INTERVAL = 0.7
-
-local collecting = false
-local isRunningAutoSell = false
-local collectConnection
-
--- COLLECT RADIUS SLIDER
-local collectRadius = MAX_DISTANCE
-local CollectRadiusSlider = GardenTab:CreateSlider({
-    Name = "Collect Radius",
-    Range = {5, 50},
-    Increment = 1,
-    Suffix = " studs",
-    CurrentValue = collectRadius,
-    Flag = "CollectRadiusSlider",
-    Callback = function(Value)
-        collectRadius = Value
-        MAX_DISTANCE = Value
-        print("🌾 Collect Radius set to:", collectRadius)
-    end,
-})
-
--- AUTO COLLECT
-local ToggleAutoCollect = GardenTab:CreateToggle({
-    Name = "Auto Collect",
+-- Kill Aura Toggle
+HuntersTab:CreateToggle({
+    Name = "Kill Aura",
     CurrentValue = false,
-    Flag = "Toggle1",
+    Flag = "KillAuraToggle",
     Callback = function(Value)
-        collecting = Value
-        if collecting then
-            collectConnection = RunService.Heartbeat:Connect(function()
-                local character = player.Character or player.CharacterAdded:Wait()
-                local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
+        local range = 85
+        local killInterval = 0.1
+        local character = player.Character or player.CharacterAdded:Wait()
+        local hrp = character:WaitForChild("HumanoidRootPart")
 
-                local plantsFolder = workspace:FindFirstChild("Farm")
-                    and workspace.Farm:FindFirstChild("Farm")
-                    and workspace.Farm.Farm:FindFirstChild("Important")
-                    and workspace.Farm.Farm.Important:FindFirstChild("Plants_Physical")
+        local function killMob(mob)
+            local humanoid = mob:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                humanoid.Health = 0
+            end
+        end
 
-                if not plantsFolder then return end
-
-                for _, plant in pairs(plantsFolder:GetChildren()) do
-                    local fruitsFolder = plant:FindFirstChild("Fruits")
-                    if fruitsFolder then
-                        for _, item in pairs(fruitsFolder:GetDescendants()) do
-                            if item:IsA("ProximityPrompt") and item.Enabled then
-                                local part = item.Parent:IsA("BasePart") and item.Parent
-                                if part then
-                                    local distance = (hrp.Position - part.Position).Magnitude
-                                    if distance <= MAX_DISTANCE then
-                                        fireproximityprompt(item)
-                                        print("🍓 Prompt fired on:", plant.Name)
-                                    end
-                                end
+        task.spawn(function()
+            while Value do
+                wait(killInterval)
+                local mobsFolder = workspace:FindFirstChild("Mobs")
+                if mobsFolder then
+                    for _, mob in pairs(mobsFolder:GetChildren()) do
+                        if mob:FindFirstChild("HumanoidRootPart") and mob ~= character then
+                            local distance = (hrp.Position - mob.HumanoidRootPart.Position).Magnitude
+                            if distance <= range then
+                                killMob(mob)
                             end
                         end
                     end
                 end
+            end
+        end)
+    end
+})
 
+--// GARDEN TAB
+local GardenTab = Window:CreateTab("Garden", 4483362458)
+local GardenSection = GardenTab:CreateSection("Garden")
+
+local collecting = false
+local collectConnection
+local isRunningAutoSell = false
+
+local MAX_DISTANCE = 8
+local CHECK_INTERVAL = 0.7
+
+-- Fire ProximityPrompt function
+local function fireProximityPrompt(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") and prompt.Enabled then
+        prompt:InputHoldBegin()
+        task.wait(prompt.HoldDuration or 1)
+        prompt:InputHoldEnd()
+    end
+end
+
+local function fireAllProximityPrompts(plantsFolder)
+    for _, plant in pairs(plantsFolder:GetChildren()) do
+        local fruitsFolder = plant:FindFirstChild("Fruits")
+        if fruitsFolder then
+            for _, item in pairs(fruitsFolder:GetDescendants()) do
+                if item:IsA("ProximityPrompt") and item.Enabled then
+                    fireProximityPrompt(item)
+                end
+            end
+        end
+    end
+end
+
+-- Auto Collect Toggle
+GardenTab:CreateToggle({
+    Name = "Auto Collect",
+    CurrentValue = false,
+    Flag = "AutoCollectToggle",
+    Callback = function(Value)
+        collecting = Value
+        if collecting then
+            collectConnection = RunService.Heartbeat:Connect(function()
+                if not collecting then
+                    collectConnection:Disconnect()
+                    collectConnection = nil
+                    return
+                end
+                local plantsFolder = workspace:FindFirstChild("Farm") and workspace.Farm:FindFirstChild("Farm") and workspace.Farm.Farm:FindFirstChild("Important") and workspace.Farm.Farm.Important:FindFirstChild("Plants_Physical")
+                if plantsFolder then
+                    fireAllProximityPrompts(plantsFolder)
+                end
                 task.wait(CHECK_INTERVAL)
             end)
-        else
-            if collectConnection then
-                collectConnection:Disconnect()
-                collectConnection = nil
-                print("⛔ Auto Collect OFF")
-            end
+        elseif collectConnection then
+            collectConnection:Disconnect()
+            collectConnection = nil
         end
     end
 })
 
--- AUTO SELL (with duplicate sell burst)
-local ToggleAutoSell = GardenTab:CreateToggle({
+-- Auto Sell Toggle
+GardenTab:CreateToggle({
     Name = "Auto Sell",
     CurrentValue = false,
-    Flag = "Toggle2",
+    Flag = "AutoSellToggle",
     Callback = function(Value)
         local character = player.Character or player.CharacterAdded:Wait()
         local hrp = character:WaitForChild("HumanoidRootPart")
         local targetPart = workspace:WaitForChild("Tutorial_Points"):WaitForChild("Tutorial_Point_2")
-        local sellEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("Sell_Inventory")
 
         local function teleportAndSell()
             local originalCFrame = hrp.CFrame
             hrp.CFrame = targetPart.CFrame
-            print("🚀 Teleported to Sell Zone")
-            task.wait(0.15)
-
-            -- Fire sell event multiple times very fast
-            for i = 1, 5 do
-                sellEvent:FireServer()
-                print("💰 Sell_Inventory fired x" .. i)
-                task.wait(0.05)
-            end
-
-            task.wait(0.15)
+            task.wait(0.2)
+            local sellEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("Sell_Inventory")
+            sellEvent:FireServer()
+            task.wait(0.1)
             hrp.CFrame = originalCFrame
-            print("🔙 Returned to original spot")
         end
 
         if Value and not isRunningAutoSell then
@@ -247,121 +170,71 @@ local ToggleAutoSell = GardenTab:CreateToggle({
             task.spawn(function()
                 while isRunningAutoSell do
                     teleportAndSell()
-                    task.wait(1.5)
+                    task.wait(2)
                 end
             end)
-        elseif not Value and isRunningAutoSell then
+        elseif not Value then
             isRunningAutoSell = false
-            print("🛑 Auto Sell Stopped")
         end
     end
 })
 
--- OPEN SHOPS
+-- Seed Shop Button
 GardenTab:CreateButton({
     Name = "Toggle Seed Shop",
     Callback = function()
-        -- Toggle Seed_Shop GUI visibility
-        local player = game:GetService("Players").LocalPlayer
-        local gui = player:FindFirstChild("PlayerGui")
-
-        if gui then
-            local seedShop = gui:FindFirstChild("Seed_Shop")
-            if seedShop then
-                -- Toggle the Enabled property
-                seedShop.Enabled = not seedShop.Enabled
-                if seedShop.Enabled then
-                    print("🌱 Seed Shop has been enabled!")
-                else
-                    print("🌱 Seed Shop has been disabled!")
-                end
-            else
-                warn("❌ Seed_Shop GUI not found!")
-            end
-        else
-            warn("⚠️ PlayerGui not found!")
+        local gui = player:WaitForChild("PlayerGui")
+        local seedShop = gui:FindFirstChild("Seed_Shop")
+        if seedShop then
+            seedShop.Enabled = not seedShop.Enabled
         end
-    end,
+    end
 })
 
+-- Gear Shop Button
 GardenTab:CreateButton({
     Name = "Toggle Gear Shop",
     Callback = function()
-        -- Toggle Gear_Shop GUI visibility
-        local player = game:GetService("Players").LocalPlayer
-        local gui = player:FindFirstChild("PlayerGui")
-
-        if gui then
-            local gearShop = gui:FindFirstChild("Gear_Shop")
-            if gearShop then
-                -- Toggle the Enabled property
-                gearShop.Enabled = not gearShop.Enabled
-                if gearShop.Enabled then
-                    print("🛠️ Gear Shop has been enabled!")
-                else
-                    print("🛠️ Gear Shop has been disabled!")
-                end
-            else
-                warn("❌ Gear_Shop GUI not found!")
-            end
-        else
-            warn("⚠️ PlayerGui not found!")
+        local gui = player:WaitForChild("PlayerGui")
+        local gearShop = gui:FindFirstChild("Gear_Shop")
+        if gearShop then
+            gearShop.Enabled = not gearShop.Enabled
         end
-    end,
+    end
 })
 
--- [Settings Tab]
+--// SETTINGS TAB
 local SettingsTab = Window:CreateTab("Settings", 4483362458)
 local SettingsSection = SettingsTab:CreateSection("UI Settings")
 
--- Theme options
-local themes = {
-   "Default",
-   "Light",
-   "Aqua",
-   "Jester"
-}
-
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-
+-- Teleport Toggle
 local holdingE = false
 local inputBeganConn, inputEndedConn, mouseClickConn
 
-local ToggleTeleport = SettingsTab:CreateToggle({
+SettingsTab:CreateToggle({
     Name = "Teleport (Hold E + Click)",
     CurrentValue = false,
     Flag = "TeleportToggle",
     Callback = function(Value)
-        -- Toggle ON
         if Value then
             inputBeganConn = UserInputService.InputBegan:Connect(function(input, processed)
                 if not processed and input.KeyCode == Enum.KeyCode.E then
                     holdingE = true
                 end
             end)
-
             inputEndedConn = UserInputService.InputEnded:Connect(function(input)
                 if input.KeyCode == Enum.KeyCode.E then
                     holdingE = false
                 end
             end)
-
             mouseClickConn = mouse.Button1Down:Connect(function()
                 if not holdingE then return end
-
-                local target = mouse.Hit.p -- Use the position of the target
-                if target then
-                    local character = player.Character
-                    if character and character:FindFirstChild("HumanoidRootPart") then
-                        character:MoveTo(target) -- Move the character to the target position
-                    end
+                local target = mouse.Hit and mouse.Hit.p
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if target and root then
+                    root.CFrame = CFrame.new(target + Vector3.new(0,3,0))
                 end
             end)
-
-        -- Toggle OFF
         else
             if inputBeganConn then inputBeganConn:Disconnect() inputBeganConn = nil end
             if inputEndedConn then inputEndedConn:Disconnect() inputEndedConn = nil end
@@ -371,45 +244,211 @@ local ToggleTeleport = SettingsTab:CreateToggle({
     end
 })
 
--- Place these variables outside so they’re accessible
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+-- Speed Boost Toggle
 local speedEnabled = false
-local targetSpeed = 16 -- default Roblox walk speed
+local targetSpeed = 50  -- Set desired walk speed
 
--- 🌀 Update speed when toggled or slider changes
-local function updateSpeed()
-    if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-        humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if speedEnabled then
-            humanoid.WalkSpeed = targetSpeed
-        else
-            humanoid.WalkSpeed = 16 -- reset to normal when disabled
-        end
-    end
-end
-
--- 🌐 Create the toggle
-local SpeedToggle = SettingsTab:CreateToggle({
+SettingsTab:CreateToggle({
     Name = "Enable Speed Boost",
     CurrentValue = false,
     Flag = "SpeedToggle",
     Callback = function(Value)
         speedEnabled = Value
+        local function updateSpeed()
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = speedEnabled and targetSpeed or 16
+            end
+        end
         updateSpeed()
+        player.CharacterAdded:Connect(updateSpeed)
     end
 })
 
-local SpeedSlider = SettingsTab:CreateSlider({
-    Name = "Player Speed",
-    Range = {16, 100}, -- normal speed to super fast
-    Increment = 1,
-    Suffix = "Speed",
-    CurrentValue = 16,
-    Flag = "SpeedSlider",
+local DumpTab = Window:CreateTab("Dump", 4483362458)
+local DumpSection = DumpTab:CreateSection("Dump")
+
+-- Auto Dig Toggle
+DumpTab:CreateToggle({
+    Name = "Auto Dig",
+    CurrentValue = false,
+    Flag = "AutoDigToggle",
     Callback = function(Value)
-        targetSpeed = Value
-        updateSpeed()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local Network = ReplicatedStorage:WaitForChild("Network")
+
+        if Value and not isAutoDigging then
+            isAutoDigging = true
+            task.spawn(function()
+                while isAutoDigging do
+                    -- Fire StartDigging
+                    Network:WaitForChild("RemoteFunctions"):WaitForChild("StartDigging"):InvokeServer()
+                    
+                    -- Wait 2 seconds
+                    task.wait(2)
+                    
+                    -- Fire EndDigging with argument "Succeeded"
+                    local args = { "Succeeded" }
+                    Network:WaitForChild("RemoteEvents"):WaitForChild("EndDigging"):FireServer(unpack(args))
+                    
+                    -- Small wait before next cycle (optional, can adjust)
+                    task.wait(0.5)
+                end
+            end)
+        elseif not Value then
+            isAutoDigging = false
+        end
     end
 })
+
+-- Sell Items Button
+DumpTab:CreateButton({
+    Name = "Sell Items",
+    Callback = function()
+        task.spawn(function()
+            local args = { "SellInventory" }
+            game:GetService("ReplicatedStorage")
+                :WaitForChild("Network")
+                :WaitForChild("RemoteEvents")
+                :WaitForChild("PawnShopInteraction")
+                :FireServer(unpack(args))
+        end)
+    end
+})
+
+-- Collect Saved Plot Money Button
+DumpTab:CreateButton({
+    Name = "Collect Saved Plot Money",
+    Callback = function()
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local Network = ReplicatedStorage:WaitForChild("Network")
+            
+            Network:WaitForChild("RemoteEvents")
+                :WaitForChild("CollectSavedPlotMoney")
+                :FireServer()
+        end)
+    end
+})
+
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local Network = ReplicatedStorage:WaitForChild("Network")
+
+local isAutoFavoring = false
+local favoredItems = {} -- track items already favored
+
+-- Helper function to check if color matches
+local function isTargetColor(color)
+    -- Yellow: [253, 253, 31]
+    if math.abs(color.R*255 - 253) <= 1 and
+       math.abs(color.G*255 - 253) <= 1 and
+       math.abs(color.B*255 - 31) <= 1 then
+        return true
+    end
+    -- Red: [253, 31, 31]
+    if math.abs(color.R*255 - 253) <= 1 and
+       math.abs(color.G*255 - 31) <= 1 and
+       math.abs(color.B*255 - 31) <= 1 then
+        return true
+    end
+    return false
+end
+
+local function favorItem(itemSlot)
+    local itemID = itemSlot.Name:gsub("ItemSlot_", "")
+    if favoredItems[itemID] then return end
+
+    local itemLabel = itemSlot:FindFirstChild("ItemNameTextLabel")
+    if itemLabel and itemLabel:IsA("TextLabel") then
+        local color = itemLabel.TextColor3
+        if isTargetColor(color) then
+            local args = { itemID }
+            local remote = Network:WaitForChild("RemoteEvents"):WaitForChild("e68ee7f4bd6eb945")
+            remote:FireServer(unpack(args))
+            favoredItems[itemID] = true
+        end
+    end
+end
+
+DumpTab:CreateToggle({
+    Name = "Auto Favor Yellow & Red Items",
+    CurrentValue = false,
+    Flag = "AutoFavorColors",
+    Callback = function(Value)
+        isAutoFavoring = Value
+        local InventoryFrame = LocalPlayer.PlayerGui:WaitForChild("Backpack")
+            :WaitForChild("Inventory")
+            :WaitForChild("Container")
+            :WaitForChild("ScrollingFrame")
+
+        if Value then
+            -- Favor existing items once
+            for _, itemSlot in ipairs(InventoryFrame:GetChildren()) do
+                if itemSlot:IsA("Frame") and itemSlot.Name:match("ItemSlot_") then
+                    favorItem(itemSlot)
+                end
+            end
+
+            -- Listen for new items added to inventory
+            InventoryFrame.ChildAdded:Connect(function(itemSlot)
+                if not isAutoFavoring then return end
+                if itemSlot:IsA("Frame") and itemSlot.Name:match("ItemSlot_") then
+                    -- Wait for the label to exist and fire only once
+                    itemSlot:WaitForChild("ItemNameTextLabel")
+                    favorItem(itemSlot)
+                end
+            end)
+        else
+            -- Reset tracking when toggle is turned off
+            favoredItems = {}
+        end
+    end
+})
+
+
+
+
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local Network = ReplicatedStorage:WaitForChild("Network")
+
+local isAutoSelling = false
+
+DumpTab:CreateToggle({
+    Name = "Auto Sell Inventory (Every 30s)",
+    CurrentValue = false,
+    Flag = "AutoSellInventory",
+    Callback = function(Value)
+        isAutoSelling = Value
+
+        if Value then
+            task.spawn(function()
+                while isAutoSelling do
+                    -- Fire the SellInventory remote
+                    local args = { "SellInventory" }
+                    Network:WaitForChild("RemoteEvents")
+                        :WaitForChild("PawnShopInteraction")
+                        :FireServer(unpack(args))
+                    
+                    -- Wait 50 seconds before selling again
+                    task.wait(30)
+                end
+            end)
+        end
+    end
+})
+
+
+
+
+
+
+
+
+
+
