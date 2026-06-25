@@ -27,7 +27,7 @@ local Window = Rayfield:CreateWindow({
    ConfigurationSaving = { Enabled = false }
 })
 
-local Tab = Window:CreateTab("Main", 4483362458)
+local Tab = Window:CreateTab("+1 Magic Evolution", 4483362458)
 
 -- HRP SAFE
 local function getHRP()
