@@ -10,7 +10,9 @@ local state = {
     magic = false,
     tp = false,
     rebirth = false,
-    egg = false
+    egg = false,
+    train = false,
+    staffTP = false
 }
 
 -- REMOTES
@@ -18,6 +20,9 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local magicRemote = Remotes:WaitForChild("GainMagicPower")
 local rebirthRemote = Remotes:WaitForChild("Rebirth")
 local openEggRemote = Remotes:WaitForChild("OpenEgg")
+
+local RuneRemote = Remotes:WaitForChild("RunePickedUp")
+local ArmorRemote = Remotes:WaitForChild("ArmorPickedUp")
 
 -- GUI
 local Window = Rayfield:CreateWindow({
@@ -29,45 +34,32 @@ local Window = Rayfield:CreateWindow({
 
 local Tab = Window:CreateTab("+1 Magic Evolution", 4483362458)
 
--- HRP SAFE
+------------------------------------------------
+-- HELPERS
+------------------------------------------------
+
 local function getHRP()
-    local char = player.Character
-    if not char then return nil end
-    return char:FindFirstChild("HumanoidRootPart")
+    local char = player.Character or player.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
 end
 
--- TARGET SAFE
-local function getTarget()
-    local stages = workspace:FindFirstChild("Stages")
-    if not stages then return nil end
-
-    local stage25 = stages:FindFirstChild("Stage25")
-    if not stage25 then return nil end
-
-    return stage25:FindFirstChild("WinButton")
-end
-
--- SAFE LOOP WRAPPER (IMPORTANT)
-local function runLoop(flagName, func, delay)
+local function runLoop(flagName, func, delayTime)
     task.spawn(function()
         while state[flagName] do
-            local ok, err = pcall(func)
-            if not ok then warn(flagName .. " error:", err) end
-            task.wait(delay)
+            pcall(func)
+            task.wait(delayTime)
         end
     end)
 end
 
--- ======================
--- MAGIC POWER
--- ======================
+------------------------------------------------
+-- MAGIC
+------------------------------------------------
 Tab:CreateToggle({
    Name = "Auto Power",
    CurrentValue = false,
-
    Callback = function(v)
       state.magic = v
-
       if v then
          runLoop("magic", function()
             magicRemote:FireServer()
@@ -76,43 +68,14 @@ Tab:CreateToggle({
    end
 })
 
--- ======================
--- TELEPORT
--- ======================
-Tab:CreateToggle({
-   Name = "Auto Win (800B+)",
-   CurrentValue = false,
-
-   Callback = function(v)
-      state.tp = v
-
-      if v then
-         runLoop("tp", function()
-            local hrp = getHRP()
-            local target = getTarget()
-
-            if hrp and target then
-                if target:IsA("BasePart") then
-                    hrp.CFrame = target.CFrame + Vector3.new(0, 3, 0)
-                elseif target:IsA("Model") then
-                    hrp.CFrame = target:GetPivot() + Vector3.new(0, 3, 0)
-                end
-            end
-         end, 0.2)
-      end
-   end
-})
-
--- ======================
+------------------------------------------------
 -- REBIRTH
--- ======================
+------------------------------------------------
 Tab:CreateToggle({
    Name = "Auto Rebirth",
    CurrentValue = false,
-
    Callback = function(v)
       state.rebirth = v
-
       if v then
          runLoop("rebirth", function()
             rebirthRemote:FireServer()
@@ -121,16 +84,14 @@ Tab:CreateToggle({
    end
 })
 
--- ======================
+------------------------------------------------
 -- EGG
--- ======================
+------------------------------------------------
 Tab:CreateToggle({
    Name = "Auto Open Demonic Egg",
    CurrentValue = false,
-
    Callback = function(v)
       state.egg = v
-
       if v then
          runLoop("egg", function()
             openEggRemote:InvokeServer("Demonic Egg")
@@ -139,31 +100,22 @@ Tab:CreateToggle({
    end
 })
 
-local teleportEnabled = false
-
-local function getHRP()
-    local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart")
-end
-
-local function getTarget()
-    return workspace:WaitForChild("StaffButtons"):WaitForChild("Staff Button19")
-end
-
+------------------------------------------------
+-- STAFF TP
+------------------------------------------------
 Tab:CreateToggle({
    Name = "Auto Best Staff",
    CurrentValue = false,
+   Callback = function(v)
+      state.staffTP = v
 
-   Callback = function(Value)
-      teleportEnabled = Value
-
-      if teleportEnabled then
+      if v then
          task.spawn(function()
-            while teleportEnabled do
+            while state.staffTP do
                 local hrp = getHRP()
-                local target = getTarget()
+                local target = workspace:WaitForChild("StaffButtons"):WaitForChild("Staff Button19")
 
-                if hrp and target then
+                if target then
                     if target:IsA("BasePart") then
                         hrp.CFrame = target.CFrame + Vector3.new(0, -3, 0)
                     else
@@ -171,18 +123,16 @@ Tab:CreateToggle({
                     end
                 end
 
-                task.wait(3) -- 👈 every 5 seconds
+                task.wait(3)
             end
          end)
       end
    end
 })
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local RuneRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RunePickedUp")
-local ArmorRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArmorPickedUp")
-
+------------------------------------------------
+-- ITEM GIVER
+------------------------------------------------
 local selectedItem = "Acid Rune"
 
 Tab:CreateDropdown({
@@ -198,14 +148,11 @@ Tab:CreateDropdown({
         "Thorned Boots",
         "Beast Hide Armor",
         "Desert Rune",
-
         "Golden Tiger Guards",
         "Dune Runners",
-
         "Demonic Rune",
         "Demonic Boots",
         "Demonic Chest",
-
         "Lunar Rune",
         "Lunar Boots",
         "Lunar Chestplate"
@@ -215,15 +162,12 @@ Tab:CreateDropdown({
 
    Callback = function(option)
         selectedItem = option[1]
-        print("Selected:", selectedItem)
    end
 })
 
 Tab:CreateButton({
    Name = "Get Item",
    Callback = function()
-        if not selectedItem then return end
-
         pcall(function()
             if string.find(selectedItem, "Rune") then
                 RuneRemote:FireServer(selectedItem)
@@ -232,4 +176,61 @@ Tab:CreateButton({
             end
         end)
    end
+})
+
+------------------------------------------------
+-- TRAINING SYSTEM
+------------------------------------------------
+
+local targets = {
+    ["1x Power"] = "TargetPractice1",
+    ["2x Power"] = "TargetPractice2",
+    ["5x Power"] = "TargetPractice3",
+    ["10x Power"] = "TargetPractice6",
+    ["50x Power"] = "TargetPractice8",
+    ["100x Power"] = "TargetPractice10"
+}
+
+local selectedKey = "1x Power"
+
+local options = {}
+for k, _ in pairs(targets) do
+    table.insert(options, k)
+end
+
+Tab:CreateDropdown({
+    Name = "Select Treadmill",
+    Options = options,
+    CurrentOption = options[1],
+
+    Callback = function(option)
+        selectedKey = option[1]
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Auto Train",
+    CurrentValue = false,
+
+    Callback = function(v)
+        state.train = v
+
+        if v then
+            task.spawn(function()
+                while state.train do
+                    local hrp = getHRP()
+                    local realName = targets[selectedKey]
+
+                    local target = workspace:WaitForChild("TargetPractices"):FindFirstChild(realName)
+
+                    if target then
+                        local cf = target:IsA("Model") and target:GetPivot() or target.CFrame
+                        hrp.CFrame = cf + Vector3.new(0, -2, 0)
+                    end
+
+                    task.wait(2)
+                end
+            end)
+        end
+    end
 })
