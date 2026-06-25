@@ -68,6 +68,46 @@ Tab:CreateToggle({
    end
 })
 
+
+state.tp = false
+
+local function getStage25()
+    local stages = workspace:FindFirstChild("Stages")
+    if not stages then return nil end
+
+    local stage25 = stages:FindFirstChild("Stage25")
+    if not stage25 then return nil end
+
+    return stage25:FindFirstChild("WinButton")
+end
+
+Tab:CreateToggle({
+   Name = "Auto Win 800B+",
+   CurrentValue = false,
+
+   Callback = function(v)
+      state.tp = v
+
+      if v then
+         task.spawn(function()
+            while state.tp do
+                local hrp = getHRP()
+                local target = getStage25()
+
+                if hrp and target then
+                    if target:IsA("BasePart") then
+                        hrp.CFrame = target.CFrame + Vector3.new(0, 3, 0)
+                    else
+                        hrp.CFrame = target:GetPivot() + Vector3.new(0, 3, 0)
+                    end
+                end
+
+                task.wait(0.2)
+            end
+         end)
+      end
+   end
+})
 ------------------------------------------------
 -- REBIRTH
 ------------------------------------------------
