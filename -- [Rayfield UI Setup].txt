@@ -177,3 +177,59 @@ Tab:CreateToggle({
       end
    end
 })
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local RuneRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RunePickedUp")
+local ArmorRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArmorPickedUp")
+
+local selectedItem = "Acid Rune"
+
+Tab:CreateDropdown({
+   Name = "Item Giver",
+   Options = {
+        "Acid Rune",
+        "Acid Boots",
+        "Acid Plate",
+        "Stone Slabs",
+        "Molten Rune",
+        "Rock Warplate",
+        "Vine Rune",
+        "Thorned Boots",
+        "Beast Hide Armor",
+        "Desert Rune",
+
+        "Golden Tiger Guards",
+        "Dune Runners",
+
+        "Demonic Rune",
+        "Demonic Boots",
+        "Demonic Chest",
+
+        "Lunar Rune",
+        "Lunar Boots",
+        "Lunar Chestplate"
+   },
+
+   CurrentOption = "Acid Rune",
+
+   Callback = function(option)
+        selectedItem = option[1]
+        print("Selected:", selectedItem)
+   end
+})
+
+Tab:CreateButton({
+   Name = "Get Item",
+   Callback = function()
+        if not selectedItem then return end
+
+        pcall(function()
+            if string.find(selectedItem, "Rune") then
+                RuneRemote:FireServer(selectedItem)
+            else
+                ArmorRemote:FireServer(selectedItem)
+            end
+        end)
+   end
+})
