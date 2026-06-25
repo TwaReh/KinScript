@@ -22,7 +22,7 @@ local openEggRemote = Remotes:WaitForChild("OpenEgg")
 -- GUI
 local Window = Rayfield:CreateWindow({
    Name = "Kin Ja's Hub",
-   LoadingTitle = "Loading...",
+   LoadingTitle = "Kin Ja's Hub",
    LoadingSubtitle = "few games",
    ConfigurationSaving = { Enabled = false }
 })
