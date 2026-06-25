@@ -62,7 +62,7 @@ end
 -- MAGIC POWER
 -- ======================
 Tab:CreateToggle({
-   Name = "Auto Gain Magic Power",
+   Name = "Auto Power",
    CurrentValue = false,
 
    Callback = function(v)
@@ -80,7 +80,7 @@ Tab:CreateToggle({
 -- TELEPORT
 -- ======================
 Tab:CreateToggle({
-   Name = "Teleport to Stage 25",
+   Name = "Auto Win 800B+",
    CurrentValue = false,
 
    Callback = function(v)
@@ -151,7 +151,7 @@ local function getTarget()
 end
 
 Tab:CreateToggle({
-   Name = "Auto TP to Staff Button19",
+   Name = "Auto Best Staff",
    CurrentValue = false,
 
    Callback = function(Value)
